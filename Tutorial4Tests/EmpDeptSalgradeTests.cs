@@ -1,12 +1,11 @@
 ﻿using Tutorial3.Models;
 
-
 public class EmpDeptSalgradeTests
-{
+ {
     // 1. Simple WHERE filter
     // SQL: SELECT * FROM Emp WHERE Job = 'SALESMAN';
     [Fact]
-    public void ShouldReturnAllSalesmen()
+    public void ShouldReturnAllSalesman()
     {
         var emps = Database.GetEmps();
 
@@ -79,11 +78,9 @@ public class EmpDeptSalgradeTests
         var emps = Database.GetEmps();
         var depts = Database.GetDepts();
 
-        var result = emps
-            .Join(depts,
-                e => e.DeptNo,
-                d => d.DeptNo,
-                (e, d) => new { e.EName, d.DName })
+        var result = (from e in emps
+                join d in depts on e.DeptNo equals d.DeptNo
+                select new { e.EName, d.DName })
             .ToList();
 
         Assert.Contains(result, r => r.DName == "SALES" && r.EName == "ALLEN");
@@ -127,10 +124,11 @@ public class EmpDeptSalgradeTests
         var emps = Database.GetEmps();
         var grades = Database.GetSalgrades();
 
-        var result = emps
-            .SelectMany(e => grades
-                .Where(g => e.Sal >= g.Losal && e.Sal <= g.Hisal)
-                .Select(g => new { e.EName, g.Grade }))
+      
+        var result = (from e in emps
+                from g in grades
+                where e.Sal >= g.Losal && e.Sal <= g.Hisal
+                select new { e.EName, g.Grade })
             .ToList();
 
         Assert.Contains(result, r => r.EName == "ALLEN" && r.Grade == 3);
@@ -158,13 +156,12 @@ public class EmpDeptSalgradeTests
     {
         var emps = Database.GetEmps();
 
-        var deptAverages = emps
-            .GroupBy(e => e.DeptNo)
-            .ToDictionary(g => g.Key, g => g.Average(e => e.Sal));
-
-        var result = emps
-            .Where(e => e.Sal > deptAverages[e.DeptNo])
-            .Select(e => e.EName)
+        var result = (from e in emps
+                let deptAvg = (from d in emps
+                    where d.DeptNo == e.DeptNo
+                    select d.Sal).Average()
+                where e.Sal > deptAvg
+                select e.EName)
             .ToList();
 
         Assert.Contains("ALLEN", result);

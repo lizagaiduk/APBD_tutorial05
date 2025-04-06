@@ -73,7 +73,7 @@ public class AdvancedEmpDeptTests
 
         Assert.All(withMgr, e => Assert.NotNull(e.Mgr));
     }
-
+    
     // 16. All employees earn more than 500
     // SQL: SELECT * FROM Emp WHERE Sal > 500; (simulate all check)  
     [Fact]
@@ -85,7 +85,7 @@ public class AdvancedEmpDeptTests
 
         Assert.True(result);
     }
-
+    
     // 17. Any employee with commission over 400
     // SQL: SELECT * FROM Emp WHERE Comm > 400;
     [Fact]
@@ -105,11 +105,9 @@ public class AdvancedEmpDeptTests
     {
         var emps = Database.GetEmps();
 
-        var result = emps
-            .Join(emps,
-                e1 => e1.Mgr,
-                e2 => e2.EmpNo,
-                (e1, e2) => new { Employee = e1.EName, Manager = e2.EName })
+        var result = (from e1 in emps
+                join e2 in emps on e1.Mgr equals e2.EmpNo
+                select new { Employee = e1.EName, Manager = e2.EName })
             .ToList();
 
         Assert.Contains(result, r => r.Employee == "SMITH" && r.Manager == "FORD");
@@ -142,20 +140,16 @@ public class AdvancedEmpDeptTests
         var depts = Database.GetDepts();
         var grades = Database.GetSalgrades();
 
-        var result = emps
-            .Join(depts,
-                e => e.DeptNo,
-                d => d.DeptNo,
-                (e, d) => new { e, d })
-            .SelectMany(joined => grades
-                .Where(g => joined.e.Sal >= g.Losal && joined.e.Sal <= g.Hisal)
-                .Select(g => new
-                {
-                    joined.e.EName,
-                    joined.d.DName,
-                    g.Grade
-                }))
-            .ToList();
+        var result = (from e in emps
+            join d in depts on e.DeptNo equals d.DeptNo
+            from g in grades
+            where e.Sal >= g.Losal && e.Sal <= g.Hisal
+            select new
+            {
+                e.EName,
+                d.DName,
+                g.Grade
+            }).ToList();
 
         Assert.Contains(result, r => r.EName == "ALLEN" && r.DName == "SALES" && r.Grade == 3);
     }
